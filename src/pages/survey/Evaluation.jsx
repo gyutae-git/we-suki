@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockCocktails, evaluationMetrics } from '../../data/mock';
 import { submitEvaluation } from '../../data/api';
 
 /* ── Fully-Custom Slider ────────────────────────────────── */
@@ -91,22 +90,24 @@ export default function Evaluation() {
   const [metrics, setMetrics] = useState([]);
   const [scores, setScores] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
 
-  // Load from server or fallback to mock
+  // Load from server
   useEffect(() => {
     import('../../data/api').then(async ({ fetchCocktails, fetchMetrics }) => {
       try {
         const cData = await fetchCocktails();
         const mData = await fetchMetrics();
         
-        setCocktails(cData || mockCocktails);
-        const resolvedMetrics = (mData && mData.length > 0) ? mData : evaluationMetrics;
-        setMetrics(resolvedMetrics);
-        setScores(resolvedMetrics.reduce((acc, m) => ({ ...acc, [m.id]: 3 }), {}));
+        if (!cData || !mData) {
+          setFetchError(true);
+        } else {
+          setCocktails(cData);
+          setMetrics(mData);
+          setScores(mData.reduce((acc, m) => ({ ...acc, [m.id]: 3 }), {}));
+        }
       } catch {
-        setCocktails(mockCocktails); // Fallback on server error
-        setMetrics(evaluationMetrics);
-        setScores(evaluationMetrics.reduce((acc, m) => ({ ...acc, [m.id]: 3 }), {}));
+        setFetchError(true);
       } finally {
         setLoading(false);
       }
@@ -116,15 +117,26 @@ export default function Evaluation() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  if (loading || !scores) {
+  if (loading) {
     return <div style={{ minHeight: '100vh', backgroundColor: '#F7F4F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>데이터를 불러오는 중...</div>;
+  }
+
+  if (fetchError) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#F7F4F0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: 24, textAlign: 'center' }}>
+        <p style={{ fontSize: 40 }}>⚠️</p>
+        <p style={{ fontSize: 18, fontWeight: 800, color: '#C00' }}>서버에 연결할 수 없습니다</p>
+        <p style={{ fontSize: 14, color: '#888' }}>데이터를 불러오지 못했습니다. 서버 상태를 확인해주세요.</p>
+        <button onClick={() => navigate('/')} style={{ marginTop: 8, padding: '12px 24px', background: '#A50034', color: 'white', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer' }}>메인으로 돌아가기</button>
+      </div>
+    );
   }
 
   const cocktail = cocktails.find(c => c.id === parseInt(id));
 
-  if (!cocktail) {
+  if (!cocktail || !scores) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#F7F4F0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#F7F4F0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: 24, textAlign: 'center' }}>
         <p style={{ fontSize: 16, color: '#888' }}>칵테일 정보를 찾을 수 없습니다.</p>
         <button onClick={() => navigate('/')} style={{ padding: '10px 24px', background: '#A50034', color: 'white', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}>돌아가기</button>
       </div>

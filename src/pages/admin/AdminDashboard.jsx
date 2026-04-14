@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { mockCocktails, evaluationMetrics } from '../../data/mock';
 import {
   fetchSubmissions, removeSubmission, clearSubmissions,
   downloadCSV, downloadJSON, calcAvgScores,
@@ -40,20 +39,28 @@ function useSubmissions() {
 function useMetrics() {
   const [metrics, setMetrics] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true); setError('');
     import('../../data/api').then(({ fetchMetrics }) => {
       fetchMetrics().then(data => {
-        setMetrics(data || evaluationMetrics.map(m => ({ ...m })));
+        if (!data) {
+          setError('평가 문항 데이터를 불러올 수 없습니다.');
+        } else {
+          setMetrics(data);
+        }
         setLoading(false);
       }).catch(() => {
-        setMetrics(evaluationMetrics.map(m => ({ ...m })));
+        setError('서버에 연결할 수 없습니다.');
         setLoading(false);
       });
     });
   }, []);
+
+  useEffect(() => { load(); }, [load]);
   
-  return { metrics, setMetrics, loading };
+  return { metrics, setMetrics, loading, error };
 }
 
 /* ── Page Header ─────────────────────────────────────────── */
@@ -94,16 +101,21 @@ function StatusBlock({ loading, error }) {
 function CocktailDB() {
   const [cocktails, setCocktails] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
 
-  // Load from server or fallback to mock
+  // Load from server
   useEffect(() => {
     import('../../data/api').then(({ fetchCocktails }) => {
       fetchCocktails().then(data => {
-        setCocktails(data || mockCocktails);
+        if (!data) {
+          setError('칵테일 목록을 불러올 수 없습니다.');
+        } else {
+          setCocktails(data);
+        }
         setLoading(false);
       }).catch(() => {
-        setCocktails(mockCocktails);
+        setError('서버에 연결할 수 없습니다.');
         setLoading(false);
       });
     });
@@ -163,7 +175,7 @@ function CocktailDB() {
     ? cocktails.filter(c => c.name.toLowerCase().includes(search.toLowerCase())).slice(0, 100)
     : cocktails.slice(0, 100);
 
-  if (loading) return <StatusBlock loading={true} />;
+  if (loading || error) return <StatusBlock loading={loading} error={error} />;
 
   return (
     <div>
@@ -255,7 +267,7 @@ function CocktailDB() {
    SURVEY METRICS
 ════════════════════════════════════════════════════════════ */
 function SurveyMetrics() {
-  const { metrics, setMetrics, loading } = useMetrics();
+  const { metrics, setMetrics, loading, error } = useMetrics();
   
   const handleSave = async () => {
     try {
@@ -267,7 +279,7 @@ function SurveyMetrics() {
     }
   };
 
-  if (loading) return <StatusBlock loading={true} />;
+  if (loading || error) return <StatusBlock loading={loading} error={error} />;
 
   return (
     <div>

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockCocktails } from '../../data/mock';
 
 const PAGE_SIZE = 60;
 const LOAD_MORE = 40;
@@ -112,6 +111,7 @@ export default function SurveyHome() {
 
   const [allCocktails, setAllCocktails] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const sentinelRef = useRef(null);
@@ -121,11 +121,15 @@ export default function SurveyHome() {
     import('../../data/api').then(({ fetchCocktails }) => {
       fetchCocktails()
         .then(data => {
-          setAllCocktails(shuffle(data || mockCocktails));
+          if (!data) {
+            setError(true);
+          } else {
+            setAllCocktails(shuffle(data));
+          }
           setLoading(false);
         })
         .catch(() => {
-          setAllCocktails(shuffle(mockCocktails));
+          setError(true);
           setLoading(false);
         });
     });
@@ -194,6 +198,21 @@ export default function SurveyHome() {
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px 0', color: '#9E9E9E', fontSize: 15 }}>
             불러오는 중...
+          </div>
+        ) : error ? (
+          <div style={{ textAlign: 'center', padding: '100px 24px', background: '#FFF5F5', borderRadius: 24, border: '1px solid #FFCCCC' }}>
+            <p style={{ fontSize: 40, marginBottom: 16 }}>⚠️</p>
+            <p style={{ fontSize: 18, fontWeight: 800, color: '#C00', marginBottom: 8 }}>서버에 연결할 수 없습니다</p>
+            <p style={{ fontSize: 14, color: '#888', lineHeight: 1.5 }}>
+              데이터를 불러오는 데 실패했습니다.<br/>
+              시스템 관리자에게 문의하거나 잠시 후 다시 시도해주세요.
+            </p>
+            <button 
+              onClick={() => window.location.reload()}
+              style={{ marginTop: 24, padding: '12px 24px', background: '#A50034', color: 'white', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer' }}
+            >
+              새로고침
+            </button>
           </div>
         ) : displayItems.length > 0 ? (
           <>
