@@ -103,6 +103,8 @@ function CocktailDB() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 100;
 
   // Load from server
   useEffect(() => {
@@ -120,6 +122,11 @@ function CocktailDB() {
       });
     });
   }, []);
+
+  // Reset page on search
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
 
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
@@ -175,6 +182,12 @@ function CocktailDB() {
     ? cocktails.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
     : cocktails;
 
+  const totalPages = Math.ceil(filteredCocktails.length / PAGE_SIZE);
+  const paginatedCocktails = filteredCocktails.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
   if (loading || error) return <StatusBlock loading={loading} error={error} />;
 
   return (
@@ -222,42 +235,97 @@ function CocktailDB() {
           <span>#</span><span>사진</span><span>이름</span><span style={{ textAlign: 'right' }}>관리</span>
         </div>
 
-        {filteredCocktails.map((c, i) => (
-          <div key={c.id} style={{ display: 'grid', gridTemplateColumns: '40px 60px 1fr 110px', gap: 16, padding: '14px 24px', borderBottom: i < filteredCocktails.length - 1 ? '1px solid #F5F2EE' : 'none', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#C8C4BC' }}>{i + 1}</span>
-            
-            <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 10, background: '#FDFCFB', border: CARD_B, overflow: 'hidden' }}>
-              {editId === c.id ? (
-                <img src={editPhoto} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} onLoad={e => { e.target.style.display = 'block'; }} />
-              ) : (
-                <img src={c.photo} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} onLoad={e => { e.target.style.display = 'block'; }} />
-              )}
-            </div>
-
-            {editId === c.id ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                 <input value={editName} onChange={e => setEditName(e.target.value)} autoFocus placeholder="이름" style={{ fontSize: 15, fontWeight: 700, padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${BRAND}`, outline: 'none', fontFamily: 'inherit' }} />
-                 <input value={editPhoto} onChange={e => setEditPhoto(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleEditSave(c.id)} placeholder="이미지 URL" style={{ fontSize: 13, padding: '8px 12px', borderRadius: 8, border: '1.5px solid #E5E1DA', outline: 'none', fontFamily: 'inherit' }} />
+        {paginatedCocktails.map((c, i) => {
+          const globalIndex = (currentPage - 1) * PAGE_SIZE + i;
+          return (
+            <div key={c.id} style={{ display: 'grid', gridTemplateColumns: '40px 60px 1fr 110px', gap: 16, padding: '14px 24px', borderBottom: i < paginatedCocktails.length - 1 ? '1px solid #F5F2EE' : 'none', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#C8C4BC' }}>{globalIndex + 1}</span>
+              
+              <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 10, background: '#FDFCFB', border: CARD_B, overflow: 'hidden' }}>
+                {editId === c.id ? (
+                  <img src={editPhoto} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} onLoad={e => { e.target.style.display = 'block'; }} />
+                ) : (
+                  <img src={c.photo} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} onLoad={e => { e.target.style.display = 'block'; }} />
+                )}
               </div>
-            ) : (
-              <span style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>{c.name}</span>
-            )}
-            
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+
               {editId === c.id ? (
-                <>
-                  <button style={btnStyle({ background: BRAND, color: 'white', padding: '7px 14px', fontSize: 13 })} onClick={() => handleEditSave(c.id)}>저장</button>
-                  <button style={btnStyle({ background: 'white', border: '1.5px solid #E5E1DA', color: '#555', padding: '7px 14px', fontSize: 13 })} onClick={() => setEditId(null)}>취소</button>
-                </>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                   <input value={editName} onChange={e => setEditName(e.target.value)} autoFocus placeholder="이름" style={{ fontSize: 15, fontWeight: 700, padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${BRAND}`, outline: 'none', fontFamily: 'inherit' }} />
+                   <input value={editPhoto} onChange={e => setEditPhoto(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleEditSave(c.id)} placeholder="이미지 URL" style={{ fontSize: 13, padding: '8px 12px', borderRadius: 8, border: '1.5px solid #E5E1DA', outline: 'none', fontFamily: 'inherit' }} />
+                </div>
               ) : (
-                <>
-                  <button title="수정" onClick={() => handleEditInit(c)} style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid #E5E1DA', background: 'white', cursor: 'pointer', fontSize: 14 }}>✏️</button>
-                  <button title="삭제" onClick={() => handleDelete(c.id)} style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid #E5E1DA', background: 'white', cursor: 'pointer', fontSize: 14 }}>🗑️</button>
-                </>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>{c.name}</span>
               )}
+              
+              <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                {editId === c.id ? (
+                  <>
+                    <button style={btnStyle({ background: BRAND, color: 'white', padding: '7px 14px', fontSize: 13 })} onClick={() => handleEditSave(c.id)}>저장</button>
+                    <button style={btnStyle({ background: 'white', border: '1.5px solid #E5E1DA', color: '#555', padding: '7px 14px', fontSize: 13 })} onClick={() => setEditId(null)}>취소</button>
+                  </>
+                ) : (
+                  <>
+                    <button title="수정" onClick={() => handleEditInit(c)} style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid #E5E1DA', background: 'white', cursor: 'pointer', fontSize: 14 }}>✏️</button>
+                    <button title="삭제" onClick={() => handleDelete(c.id)} style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid #E5E1DA', background: 'white', cursor: 'pointer', fontSize: 14 }}>🗑️</button>
+                  </>
+                )}
+              </div>
             </div>
+          );
+        })}
+      </div>
+
+      {/* Pagination UI */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 24, padding: '0 20px' }}>
+          <button 
+            disabled={currentPage === 1}
+            onClick={() => { setCurrentPage(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #E5E1DA', background: 'white', fontSize: 12, fontWeight: 700, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.4 : 1 }}
+          >
+            처음
+          </button>
+          
+          <div style={{ display: 'flex', gap: 4 }}>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              // Sliding window of 5 pages around current
+              let pageNum;
+              if (totalPages <= 5) pageNum = i + 1;
+              else if (currentPage <= 3) pageNum = i + 1;
+              else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+              else pageNum = currentPage - 2 + i;
+
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => { setCurrentPage(pageNum); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  style={{
+                    width: 36, height: 36, borderRadius: 8, border: pageNum === currentPage ? `2px solid ${BRAND}` : '1px solid #E5E1DA',
+                    background: pageNum === currentPage ? BRAND : 'white',
+                    color: pageNum === currentPage ? 'white' : '#555',
+                    fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
           </div>
-        ))}
+
+          <button 
+            disabled={currentPage === totalPages}
+            onClick={() => { setCurrentPage(totalPages); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #E5E1DA', background: 'white', fontSize: 12, fontWeight: 700, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.4 : 1 }}
+          >
+            끝
+          </button>
+        </div>
+      )}
+      
+      <div style={{ textAlign: 'center', marginTop: 12, fontSize: 12, color: '#AAA', fontWeight: 600 }}>
+        전체 {filteredCocktails.length}개 중 {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filteredCocktails.length)} 표시
       </div>
     </div>
   );
