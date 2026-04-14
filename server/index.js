@@ -15,6 +15,10 @@ app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Serve static files from the React app
+const distPath = path.join(__dirname, '../dist');
+app.use(express.static(distPath));
+
 // Initialize data file if missing
 if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify({ submissions: [], cocktails: null }, null, 2), 'utf-8');
@@ -109,6 +113,12 @@ app.delete('/api/submissions/:id', (req, res) => {
 app.delete('/api/submissions', (req, res) => {
   writeData({ submissions: [] });
   res.json({ ok: true });
+});
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {
