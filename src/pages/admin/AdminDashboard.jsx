@@ -172,8 +172,8 @@ function CocktailDB() {
   };
 
   const filteredCocktails = search
-    ? cocktails.filter(c => c.name.toLowerCase().includes(search.toLowerCase())).slice(0, 100)
-    : cocktails.slice(0, 100);
+    ? cocktails.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
+    : cocktails;
 
   if (loading || error) return <StatusBlock loading={loading} error={error} />;
 
