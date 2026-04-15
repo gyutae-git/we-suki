@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import {
   fetchSubmissions, removeSubmission, clearSubmissions,
@@ -135,6 +135,11 @@ function CocktailDB() {
   const [editId, setEditId] = useState(null);
   const [editName, setEditName] = useState('');
   const [editPhoto, setEditPhoto] = useState('');
+  const [editRecipeGlass, setEditRecipeGlass] = useState('');
+  const [editRecipeGarnish, setEditRecipeGarnish] = useState('');
+  const [editRecipeMethod, setEditRecipeMethod] = useState('');
+  const [editRecipeMethodCat, setEditRecipeMethodCat] = useState('');
+  const [editRecipeIngredients, setEditRecipeIngredients] = useState('');
 
   // Persist whenever cocktail list changes
   const persistSync = async (nextList) => {
@@ -167,13 +172,43 @@ function CocktailDB() {
   const handleEditInit = (c) => {
     setEditId(c.id);
     setEditName(c.name);
-    setEditPhoto(c.photo);
+    setEditPhoto(c.photo || '');
+    const r = c.recipe || {};
+    setEditRecipeGlass(r.glass || '');
+    setEditRecipeGarnish(r.garnish || '');
+    setEditRecipeMethod(r.method || '');
+    setEditRecipeMethodCat(r.method_category || '');
+    // Serialize ingredients as simple text: "name, ml" per line
+    setEditRecipeIngredients(
+      Array.isArray(r.ingredients)
+        ? r.ingredients.map(ing => `${ing.name}, ${ing.ml}`).join('\n')
+        : ''
+    );
   };
 
   const handleEditSave = (id) => {
     if (!editName.trim()) return;
-    persistSync(cocktails.map(c => 
-      c.id === id ? { ...c, name: editName, photo: editPhoto } : c
+    // Parse ingredients text back to array
+    const ingredients = editRecipeIngredients
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map(line => {
+        const lastComma = line.lastIndexOf(',');
+        if (lastComma === -1) return { name: line, ml: 0 };
+        const name = line.slice(0, lastComma).trim();
+        const ml = parseFloat(line.slice(lastComma + 1).trim()) || 0;
+        return { name, ml };
+      });
+    const recipe = {
+      glass: editRecipeGlass,
+      garnish: editRecipeGarnish,
+      method: editRecipeMethod,
+      method_category: editRecipeMethodCat,
+      ingredients,
+    };
+    persistSync(cocktails.map(c =>
+      c.id === id ? { ...c, name: editName, photo: editPhoto, recipe } : c
     ));
     setEditId(null);
   };
@@ -238,7 +273,8 @@ function CocktailDB() {
         {paginatedCocktails.map((c, i) => {
           const globalIndex = (currentPage - 1) * PAGE_SIZE + i;
           return (
-            <div key={c.id} style={{ display: 'grid', gridTemplateColumns: '40px 60px 1fr 110px', gap: 16, padding: '14px 24px', borderBottom: i < paginatedCocktails.length - 1 ? '1px solid #F5F2EE' : 'none', alignItems: 'center' }}>
+            <React.Fragment key={c.id}>
+            <div style={{ display: 'grid', gridTemplateColumns: '40px 60px 1fr 110px', gap: 16, padding: '14px 24px', borderBottom: i < paginatedCocktails.length - 1 ? '1px solid #F5F2EE' : 'none', alignItems: 'center' }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#C8C4BC' }}>{globalIndex + 1}</span>
               
               <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 10, background: '#FDFCFB', border: CARD_B, overflow: 'hidden' }}>
@@ -252,7 +288,7 @@ function CocktailDB() {
               {editId === c.id ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                    <input value={editName} onChange={e => setEditName(e.target.value)} autoFocus placeholder="이름" style={{ fontSize: 15, fontWeight: 700, padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${BRAND}`, outline: 'none', fontFamily: 'inherit' }} />
-                   <input value={editPhoto} onChange={e => setEditPhoto(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleEditSave(c.id)} placeholder="이미지 URL" style={{ fontSize: 13, padding: '8px 12px', borderRadius: 8, border: '1.5px solid #E5E1DA', outline: 'none', fontFamily: 'inherit' }} />
+                   <input value={editPhoto} onChange={e => setEditPhoto(e.target.value)} placeholder="이미지 URL" style={{ fontSize: 13, padding: '8px 12px', borderRadius: 8, border: '1.5px solid #E5E1DA', outline: 'none', fontFamily: 'inherit' }} />
                 </div>
               ) : (
                 <span style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>{c.name}</span>
@@ -272,6 +308,21 @@ function CocktailDB() {
                 )}
               </div>
             </div>
+
+            {/* Recipe edit panel — shown below the row when editing */}
+            {editId === c.id && (
+              <div style={{ padding: '0 24px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ fontSize: 11, fontWeight: 800, color: '#AAA', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>레시피 수정</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <input value={editRecipeMethodCat} onChange={e => setEditRecipeMethodCat(e.target.value)} placeholder="조주법 (Shake, Stir, Build...)" style={{ padding: '8px 12px', borderRadius: 8, border: '1.5px solid #E5E1DA', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+                  <input value={editRecipeGlass} onChange={e => setEditRecipeGlass(e.target.value)} placeholder="글라스" style={{ padding: '8px 12px', borderRadius: 8, border: '1.5px solid #E5E1DA', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+                </div>
+                <textarea value={editRecipeIngredients} onChange={e => setEditRecipeIngredients(e.target.value)} placeholder={"재료 (한 줄에 하나씩, 형식: 재료명, 양(ml))\n예)\nGin, 45\nLemon juice, 22.5"} rows={5} style={{ padding: '10px 12px', borderRadius: 8, border: '1.5px solid #E5E1DA', fontSize: 13, outline: 'none', fontFamily: 'inherit', resize: 'vertical', lineHeight: 1.6 }} />
+                <textarea value={editRecipeMethod} onChange={e => setEditRecipeMethod(e.target.value)} placeholder="조주 방법 설명" rows={3} style={{ padding: '10px 12px', borderRadius: 8, border: '1.5px solid #E5E1DA', fontSize: 13, outline: 'none', fontFamily: 'inherit', resize: 'vertical', lineHeight: 1.6 }} />
+                <textarea value={editRecipeGarnish} onChange={e => setEditRecipeGarnish(e.target.value)} placeholder="가니쉬" rows={2} style={{ padding: '10px 12px', borderRadius: 8, border: '1.5px solid #E5E1DA', fontSize: 13, outline: 'none', fontFamily: 'inherit', resize: 'vertical', lineHeight: 1.6 }} />
+              </div>
+            )}
+            </React.Fragment>
           );
         })}
       </div>
@@ -466,7 +517,7 @@ function ResultsByCocktail() {
                 {stats && (
                   <div style={{ textAlign: 'center', padding: '10px 20px', background: '#FFF0F4', borderRadius: 14 }}>
                     <p style={{ fontSize: 28, fontWeight: 900, color: BRAND, lineHeight: 1 }}>{stats.overall}</p>
-                    <p style={{ fontSize: 10, color: '#CCA0AD', fontWeight: 700, marginTop: 2 }}>평균 / 5</p>
+                    <p style={{ fontSize: 10, color: '#CCA0AD', fontWeight: 700, marginTop: 2 }}>평균 / 10</p>
                   </div>
                 )}
                 <span style={{ fontSize: 18, color: '#CCC', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▾</span>
@@ -480,7 +531,7 @@ function ResultsByCocktail() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 28 }}>
                     {metrics.map(m => {
                       const v = Number(stats.avgs[m.id]);
-                      const pct = ((v - 1) / 4) * 100;
+                      const pct = (v / 10) * 100;
                       return (
                         <div key={m.id} style={{ background: '#FDFCFB', borderRadius: 12, border: '1px solid #F0EDE8', padding: '14px 16px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -564,7 +615,7 @@ function ResultsExport() {
         {[
           { label: '총 응답 수', val: loading ? '...' : total, unit: '건' },
           { label: '이번 주 응답', val: loading ? '...' : thisWeek, unit: '건' },
-          { label: '전체 평균', val: loading ? '...' : avgOverall, unit: '/ 5' },
+          { label: '전체 평균', val: loading ? '...' : avgOverall, unit: '/ 10' },
         ].map(s => (
           <div key={s.label} style={{ background: 'white', borderRadius: 20, border: CARD_B, boxShadow: CARD_S, padding: '20px 24px' }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: '#AAA', marginBottom: 8 }}>{s.label}</p>

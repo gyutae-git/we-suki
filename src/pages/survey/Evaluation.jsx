@@ -4,7 +4,7 @@ import { submitEvaluation } from '../../data/api';
 
 /* ── Fully-Custom Slider ────────────────────────────────── */
 function CustomSlider({ value, onChange }) {
-  const pct = ((value - 1) / 4) * 100;
+  const pct = (value / 10) * 100;
   const D = 26; // thumb diameter
 
   return (
@@ -38,7 +38,7 @@ function CustomSlider({ value, onChange }) {
 
       {/* Invisible native range (handles all interaction + keyboard) */}
       <input
-        type="range" min="1" max="5" step="1" value={value}
+        type="range" min="0" max="10" step="1" value={value}
         onChange={e => onChange(Number(e.target.value))}
         style={{
           position: 'absolute', top: 0, left: 0,
@@ -50,7 +50,7 @@ function CustomSlider({ value, onChange }) {
   );
 }
 
-const LEVEL = ['', '매우 낮음', '낮음', '보통', '높음', '매우 높음'];
+const LEVEL = ['매우 낮음', '', '낮음', '', '보통', '', '높음', '', '매우 높음', '', '최상'];
 
 function SliderRow({ index, label, value, onChange, isLast }) {
   return (
@@ -69,7 +69,7 @@ function SliderRow({ index, label, value, onChange, isLast }) {
       <CustomSlider value={value} onChange={onChange} />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
-        {[1, 2, 3, 4, 5].map(n => (
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
           <span key={n} style={{
             fontSize: 11, fontWeight: 700,
             color: n <= value ? '#A50034' : '#D5D1CB',
@@ -77,6 +77,83 @@ function SliderRow({ index, label, value, onChange, isLast }) {
           }}>{n}</span>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ── Recipe Card ─────────────────────────────────────────── */
+const METHOD_EMOJI = { Shake: '🍸', Stir: '🥄', Blend: '🌀', Build: '🧊', Layer: '🪣' };
+
+function RecipeCard({ recipe }) {
+  const [open, setOpen] = useState(false);
+  if (!recipe) return null;
+
+  const emoji = METHOD_EMOJI[recipe.method_category] || '🍹';
+  const glassShort = recipe.glass
+    ? recipe.glass.replace(/Serve in an? /i, '').replace(/ glass\.?$/i, '').trim()
+    : '';
+
+  return (
+    <div style={{
+      background: 'white', borderRadius: 20, border: '1px solid #EEEBE6',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 16, overflow: 'hidden',
+    }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 20px', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 22 }}>{emoji}</span>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 800, color: '#A50034', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 2 }}>레시피</p>
+            <p style={{ fontSize: 14, fontWeight: 700, color: '#555' }}>
+              {recipe.method_category || '조주법'}{glassShort ? ` · ${glassShort}` : ''}
+            </p>
+          </div>
+        </div>
+        <span style={{ fontSize: 18, color: '#CCC', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▾</span>
+      </button>
+
+      {open && (
+        <div style={{ borderTop: '1px solid #F5F2EE', padding: '16px 20px' }}>
+          {Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 800, color: '#AAA', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>재료</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {recipe.ingredients.map((ing, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#FDFCFB', borderRadius: 10, border: '1px solid #F0EDE8' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#333', flex: 1 }}>{ing.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 900, color: '#A50034', marginLeft: 12, whiteSpace: 'nowrap' }}>
+                      {Number(ing.ml) % 1 === 0 ? Number(ing.ml) : Number(ing.ml).toFixed(1)} ml
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {recipe.method && (
+            <div style={{ marginBottom: 14 }}>
+              <p style={{ fontSize: 11, fontWeight: 800, color: '#AAA', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>조주법</p>
+              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, background: '#FDFCFB', borderRadius: 10, padding: '10px 14px', border: '1px solid #F0EDE8' }}>
+                {recipe.method}
+              </p>
+            </div>
+          )}
+
+          {recipe.garnish && (
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 800, color: '#AAA', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>가니쉬</p>
+              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, background: '#FDFCFB', borderRadius: 10, padding: '10px 14px', border: '1px solid #F0EDE8' }}>
+                {recipe.garnish}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -92,19 +169,17 @@ export default function Evaluation() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
 
-  // Load from server
   useEffect(() => {
     import('../../data/api').then(async ({ fetchCocktails, fetchMetrics }) => {
       try {
         const cData = await fetchCocktails();
         const mData = await fetchMetrics();
-        
         if (!cData || !mData) {
           setFetchError(true);
         } else {
           setCocktails(cData);
           setMetrics(mData);
-          setScores(mData.reduce((acc, m) => ({ ...acc, [m.id]: 3 }), {}));
+          setScores(mData.reduce((acc, m) => ({ ...acc, [m.id]: 5 }), {}));
         }
       } catch {
         setFetchError(true);
@@ -188,7 +263,7 @@ export default function Evaluation() {
       <div style={{ maxWidth: 520, margin: '0 auto', padding: '24px 20px 0' }}>
 
         {/* Cocktail Card */}
-        <div style={{ background: 'white', borderRadius: 24, border: '1px solid #EEEBE6', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 16, padding: 20, marginBottom: 20 }}>
+        <div style={{ background: 'white', borderRadius: 24, border: '1px solid #EEEBE6', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 16, padding: 20, marginBottom: 16 }}>
           <div style={{ width: 80, height: 80, borderRadius: 16, overflow: 'hidden', flexShrink: 0, background: '#F0EDE8' }}>
             <img src={cocktail.photo} alt={cocktail.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           </div>
@@ -201,6 +276,9 @@ export default function Evaluation() {
             <span style={{ fontSize: 10, fontWeight: 700, color: '#CCA0AD', marginTop: 2 }}>평균</span>
           </div>
         </div>
+
+        {/* Recipe Card */}
+        <RecipeCard recipe={cocktail.recipe} />
 
         {/* Error */}
         {error && (

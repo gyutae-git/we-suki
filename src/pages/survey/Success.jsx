@@ -43,7 +43,7 @@ export default function Success() {
         <p style={{ fontSize: 12, fontWeight: 700, color: '#AAA', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>평균 점수</p>
         <p style={{ fontSize: 48, fontWeight: 900, color: '#A50034', letterSpacing: '-0.04em', lineHeight: 1 }}>
           {avg}
-          <span style={{ fontSize: 18, color: '#CCC', fontWeight: 600 }}>/5</span>
+          <span style={{ fontSize: 18, color: '#CCC', fontWeight: 600 }}>/10</span>
         </p>
       </div>
 
